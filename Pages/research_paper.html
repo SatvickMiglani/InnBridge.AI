@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Research Papers - InnoBridge AI</title>
+<link rel="stylesheet" href="../css/output.css">
+<script src="../js/script.js"></script>
+</head>
+
+<body class="bg-white text-black">
+
+<!-- HEADER -->
+<header class="sticky top-0 z-50 bg-white border-b border-gray-200">
+  <div class="flex items-center justify-between px-10 py-4">
+
+    <h1 class="text-xl font-semibold">InnoBridge AI</h1>
+
+    <nav class="flex gap-8 text-gray-600">
+      <a href="index.html" class="hover:text-black">Home</a>
+      <a href="projects.html" class="hover:text-black">Projects</a>
+      <a href="about.html" class="hover:text-black">About</a>
+    </nav>
+
+  </div>
+</header>
+
+<!-- SEARCH -->
+<section class="px-10 py-6">
+
+  <div class="max-w-3xl mx-auto flex gap-4">
+
+    <input 
+      id="searchInput"
+      type="text"
+      placeholder="Search research papers..."
+      class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+
+    <button onclick="searchPapers()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+      Search
+    </button>
+
+  </div>
+
+</section>
+
+<!-- RESULT COUNT -->
+<section class="px-10">
+  <p id="resultCount" class="text-gray-500 text-sm max-w-3xl mx-auto">
+    0 results found
+  </p>
+</section>
+
+<!-- RESULTS -->
+<section class="px-10 py-6">
+
+  <div id="resultsContainer" class="max-w-3xl mx-auto space-y-6">
+
+    <!-- SAMPLE RESULT -->
+    <div class="border-b pb-4">
+
+      <h2 class="text-lg font-semibold text-blue-600 hover:underline cursor-pointer">
+        Deep Learning for Image Classification
+      </h2>
+
+      <p class="text-sm text-gray-600">
+        John Doe, Jane Smith • 2024
+      </p>
+
+      <p class="text-gray-700 mt-2 text-sm">
+        This paper explores convolutional neural networks for large-scale image classification tasks...
+      </p>
+
+    </div>
+
+  </div>
+
+</section>
+
+</body>
+</html>

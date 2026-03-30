@@ -1,3 +1,4 @@
+
 .env
 venv/
 __pycache__/
@@ -7,3 +8,17 @@ node_modules/
 .next/
 backend/venv/
 docs/
+
+# Ignore node dependencies
+node_modules/
+
+# Ignore zip files
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Optional: logs
+npm-debug.log*
+

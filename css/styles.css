@@ -1,0 +1,49 @@
+/* 🎯 Design Tokens */
+:root {
+  --space-xs: 8px;
+  --space-sm: 16px;
+  --space-md: 24px;
+  --space-lg: 32px;
+
+  --radius: 12px;
+  --border: 1px solid rgba(255,255,255,0.1);
+
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+
+  --bg-glass: rgba(255,255,255,0.05);
+  --shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+
+/* 🎯 Reusable Card */
+.card {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-md);
+  box-shadow: var(--shadow);
+}
+
+/* 🎯 Buttons */
+.btn {
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signup - InnoBridge AI</title>
+<link rel="stylesheet" href="../css/output.css">
+<script src="../js/script.js" defer></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
+</head>
+
+<body class="bg-black text-white">
+
+<div class="min-h-screen flex flex-col md:flex-row">
+
+  <!-- LEFT SIDE -->
+  <div class="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black relative">
+
+    <!-- Glow -->
+    <div class="absolute w-[400px] h-[400px] bg-blue-600/20 blur-3xl rounded-full"></div>
+
+    <div class="relative text-center px-10">
+      <h1 class="text-4xl font-bold mb-4">Join InnoBridge AI</h1>
+      <p class="text-white/40 max-w-md">
+        Discover, build, and collaborate on innovative AI-powered student projects.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- RIGHT SIDE FORM -->
+  <div class="flex-1 flex items-center justify-center px-6 py-10">
+
+    <div class="w-full max-w-md bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-8">
+
+      <h2 class="text-2xl font-semibold mb-6 text-center">Create Account</h2>
+
+      <!-- SOCIAL LOGIN -->
+      <div class="space-y-3">
+
+        <button class="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 py-3 rounded-lg hover:bg-white/10 transition">
+        
+        <!-- GOOGLE SVG -->
+        <svg class="w-5 h-5" viewBox="0 0 48 48">
+            <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.8 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/>
+            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.4 4 24 4 16.3 4 9.6 8.4 6.3 14.7z"/>
+            <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.5-5.2l-6.2-5.1C29.2 35.7 26.8 36 24 36c-5.2 0-9.6-3.3-11.1-7.9l-6.5 5C9.6 39.5 16.3 44 24 44z"/>
+            <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.4 5.6-6.4 7.1l6.2 5.1C39.6 36.5 44 30.8 44 24c0-1.3-.1-2.3-.4-3.5z"/>
+        </svg>
+
+        Continue with Google
+        </button>
+
+        <button class="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 py-3 rounded-lg hover:bg-white/10 transition">
+
+        <svg class="w-5 h-5 fill-white" viewBox="0 0 24 24">
+            <path d="M22 12a10 10 0 1 0-11.5 9.9v-7h-3v-3h3v-2.3c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.8V12h3.4l-.5 3h-2.9v7A10 10 0 0 0 22 12"/>
+        </svg>
+
+        Continue with Facebook
+        </button>
+
+        <button class="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 py-3 rounded-lg hover:bg-white/10 transition">
+
+        <svg class="w-5 h-5" viewBox="0 0 24 24">
+            <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
+            <rect x="13" y="1" width="10" height="10" fill="#7FBA00"/>
+            <rect x="1" y="13" width="10" height="10" fill="#00A4EF"/>
+            <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
+        </svg>
+
+        Continue with Microsoft
+        </button>
+
+      </div>
+
+      <!-- DIVIDER -->
+      <div class="flex items-center my-6">
+        <div class="flex-1 h-px bg-white/10"></div>
+        <span class="px-4 text-white/40 text-sm">OR</span>
+        <div class="flex-1 h-px bg-white/10"></div>
+      </div>
+
+      <!-- FORM -->
+      <form class="space-y-4">
+
+        <input type="text" placeholder="Full Name"
+          class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 outline-none placeholder-white/40">
+
+        <input type="email" placeholder="Email Address"
+          class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 outline-none placeholder-white/40">
+
+        <input type="tel" placeholder="Phone Number"
+          class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 outline-none placeholder-white/40">
+
+        <input type="password" placeholder="Password"
+          class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 outline-none placeholder-white/40">
+
+        <!-- INTEREST SECTION -->
+        <div>
+          <p class="text-sm text-white/60 mb-2">Select Your Interests</p>
+
+          <div class="flex flex-wrap gap-2">
+
+            <span class="interest">Machine Learning</span>
+            <span class="interest">Web Development</span>
+            <span class="interest">AI Research</span>
+            <span class="interest">Data Science</span>
+            <span class="interest">App Development</span>
+            <span class="interest">Cybersecurity</span>
+
+          </div>
+
+        </div>
+
+        <!-- SIGNUP BUTTON -->
+        <button class="w-full bg-blue-600 py-3 rounded-lg hover:scale-105 transition mt-4">
+          Create Account
+        </button>
+
+      </form>
+
+      <p class="text-center text-white/40 text-sm mt-4">
+        Already have an account? 
+        <a href="login.html" class="text-blue-500">Login</a>
+      </p>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- INTEREST STYLE -->
+<style>
+.interest{
+  padding:6px 12px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.05);
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.interest:hover{
+  background:#2563eb;
+}
+</style>
+
+<script>
+  lucide.createIcons();
+
+  // Select interest toggle
+  document.querySelectorAll('.interest').forEach(item => {
+    item.addEventListener('click', () => {
+      item.classList.toggle('bg-blue-600');
+    });
+  });
+</script>
+
+</body>
+</html>
