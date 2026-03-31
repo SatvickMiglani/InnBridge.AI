@@ -39,7 +39,8 @@ def search_papers_by_interest(
     # embed the query
     query_vector = model.encode(query_text).tolist()
 
-    # search Qdrant
+    # query_vector = ... (embedding done above)
+
     from qdrant_client.models import QueryRequest
     results = client.query_points(
         collection_name=COLLECTION_NAME,
@@ -56,6 +57,44 @@ def search_papers_by_interest(
             paper_ids.append(paper_id)
 
     return paper_ids
+
+
+def search_papers_semantically(
+    query: str,
+    interests: list[str],
+    db: Session,
+    top_k: int = 20
+) -> list[Paper]:
+    """
+    Advanced semantic search:
+    Combines the user's profile interests with their specific search query.
+    Ensures that "narrows things down" logic is applied.
+    """
+    # Combine interest context with the specific search term
+    # Re-balanced to ensure broader interest discovery is not blocked by strict query intent
+    combined_query = f"Searching for: {query}. Related context: {', '.join(interests)}"
+    
+    query_vector = model.encode(combined_query).tolist()
+    
+    results = client.query_points(
+        collection_name=COLLECTION_NAME,
+        query=query_vector,
+        limit=top_k,
+        with_payload=True,
+    ).points
+
+    paper_ids = [
+        hit.payload.get("paper_id")
+        for hit in results
+        if hit.payload.get("paper_id")
+    ]
+
+    if not paper_ids:
+        return []
+
+    papers = db.query(Paper).filter(Paper.id.in_(paper_ids)).all()
+    paper_map = {str(p.id): p for p in papers}
+    return [paper_map[pid] for pid in paper_ids if pid in paper_map]
 
 
 # -------------------------------------------------------

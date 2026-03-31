@@ -140,14 +140,27 @@ Return exactly this JSON structure:
     except json.JSONDecodeError:
         start = raw.find("{")
         end = raw.rfind("}") + 1
-        data = json.loads(raw[start:end])
+        if start != -1 and end > start:
+            try:
+                data = json.loads(raw[start:end])
+            except json.JSONDecodeError:
+                data = {}
+        else:
+            data = {}
 
     paper.summary_one_min    = data.get("summary_one_min", paper.summary_one_min or "")
     paper.summary_five_min   = data.get("summary_five_min", "")
     paper.summary_deep       = data.get("summary_deep", "")
     paper.build_ideas        = data.get("build_ideas", "")
     paper.suggested_stack    = data.get("suggested_stack", [])
-    paper.difficulty_score   = float(data.get("difficulty_score", 5.0))
+    
+    # Safe float conversion
+    try:
+        score_raw = data.get("difficulty_score", 5.0)
+        paper.difficulty_score = float(score_raw)
+    except (ValueError, TypeError):
+        paper.difficulty_score = 5.0
+
     paper.estimated_build_time = data.get("estimated_build_time", "")
 
     if db:

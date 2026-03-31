@@ -1,19 +1,4 @@
-"""
-app/ingestion/hn_fetcher.py
 
-Three functions:
-  1. fetch_stories_by_interests()  — personalized daily feed filtered by user interests
-  2. search_hn_stories()           — search bar, queries Algolia HN Search API
-  3. fetch_stories_for_project()   — HN discussions relevant to a project detail page
-
-APIs used:
-  - HN Firebase API    : https://hacker-news.firebaseio.com  (top stories, item details)
-  - Algolia HN Search  : https://hn.algolia.com/api/v1       (search + interest filtering)
-
-No API key required for either. Both are free and unlimited for reasonable usage.
-
-Person A (Satvick) — Phase 9
-"""
 
 import httpx
 import json
@@ -165,18 +150,6 @@ async def fetch_stories_by_interests(
     """
     queries = await _interests_to_queries(interests)
 
-    # Build a flat set of interest keywords for post-fetch relevance check
-    interest_keywords = set()
-    for interest in interests:
-        for word in interest.lower().split():
-            if len(word) > 2:
-                interest_keywords.add(word)
-    # Also add words from the generated queries
-    for query in queries:
-        for word in query.lower().split():
-            if len(word) > 2:
-                interest_keywords.add(word)
-
     seen_ids: set[str] = set()
     all_stories: list[dict] = []
 
@@ -186,11 +159,11 @@ async def fetch_stories_by_interests(
                 params = {
                     "query"         : query,
                     "tags"          : "story",
-                    "numericFilters": "points>5",
-                    "hitsPerPage"   : 15,
+                    "numericFilters": "points>15", # Focus on higher quality discussions
+                    "hitsPerPage"   : 5,           # Less quantity, higher rank
                 }
-                # search_by_date — returns most recent relevant stories first, no date window cap
-                resp = await client.get(f"{HN_ALGOLIA_BASE}/search_by_date", params=params)
+                # Use /search instead of /search_by_date for immense relevancy gains
+                resp = await client.get(f"{HN_ALGOLIA_BASE}/search", params=params)
                 resp.raise_for_status()
                 hits = resp.json().get("hits", [])
 
@@ -199,13 +172,7 @@ async def fetch_stories_by_interests(
                     if not story or story["id"] in seen_ids:
                         continue
 
-                    # Relevance check — title must share at least 2 keywords
-                    # with the user's interests or generated queries
-                    title_words = set(story["title"].lower().split())
-                    overlap = title_words.intersection(interest_keywords)
-                    if len(overlap) < 2:
-                        continue
-
+                    # Algolia is inherently highly relevant if we sort by score/relevancy
                     seen_ids.add(story["id"])
                     all_stories.append(story)
 
@@ -213,8 +180,8 @@ async def fetch_stories_by_interests(
                 logger.warning(f"HN interest search failed for '{query}': {e}")
                 continue
 
-    # Sort by date — most recent relevant stories first, no date cap so feed never runs dry
-    all_stories.sort(key=lambda s: s["fetched_at"], reverse=True)
+    # Sort the unified results by score to bubble up the best discussions across interests
+    all_stories.sort(key=lambda s: s["score"], reverse=True)
     logger.info(f"Fetched {len(all_stories)} personalized HN stories for interests: {interests}")
     return all_stories[:limit]
 

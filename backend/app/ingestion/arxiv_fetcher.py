@@ -6,11 +6,11 @@ ARXIV_API = "https://export.arxiv.org/api/query"
 
 async def fetch_papers(field: str = "AI", user_query: str = "", max_results: int = 10):
     # Combine field and user description into search query
-    base_query = field
+    # Restored to a more inclusive format to bring back quantity and diversity
     if user_query:
-        search_query = f"all:{user_query} AND all:{field}"
+        search_query = f"all:{user_query} AND (all:{field} OR all:AI OR all:\"Computer Science\")"
     else:
-        search_query = f"all:{field}"
+        search_query = f"all:{field}" if " " not in field else f"all:\"{field}\""
 
     params = {
         "search_query": search_query,

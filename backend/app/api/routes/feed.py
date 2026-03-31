@@ -1,5 +1,6 @@
 # backend/app/api/routes/feed.py
 
+import uuid
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -107,20 +108,24 @@ async def get_unified_feed(
     skill_level is passed to all fetchers so content depth matches the user.
     """
 
-    # --- Fetch user ---
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    # Robust ID Handling (Guest support)
+    user = None
+    try:
+        # Check if it's a valid UUID
+        uuid_val = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == str(uuid_val)).first()
+    except (ValueError, AttributeError):
+        pass
 
-    if not user.interests or len(user.interests) == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="User has no interests set. Please update profile first."
-        )
-
-    interests   = user.interests
-    skill_level = user.skill_level or "intermediate"
-    designation = user.designation or "college student"
+    if user:
+        interests = user.interests or ["AI", "Tech"]
+        skill_level = user.skill_level or "intermediate"
+        designation = user.designation or "college student"
+    # Guest fallback
+    else:
+        interests = ["AI", "Tech", "Software"]
+        skill_level = "intermediate"
+        designation = "developer"
 
     # --- Check if any papers exist in DB ---
     paper_count = db.query(Paper).count()
@@ -243,22 +248,35 @@ async def get_paper_detail(
     db: Session = Depends(get_db)
 ):
     # fetch user for role context
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = None
+    try:
+        user_uuid = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == user_uuid).first()
+    except (ValueError, AttributeError):
+        # Fallback for "guest" string or invalid UUID
+        user = None
 
     # fetch paper
     paper = db.query(Paper).filter(Paper.id == paper_id).first()
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found")
 
+    # Use user profile for summarization, or defaults for guests
+    designation = user.designation if user else "AI Researcher"
+    skill_level = user.skill_level if user else "intermediate"
+
     # full summarize if not done yet
-    paper = summarize_paper_full(
-        paper=paper,
-        designation=user.designation or "college student",
-        skill_level=user.skill_level or "intermediate",
-        db=db
-    )
+    try:
+        paper = summarize_paper_full(
+            paper=paper,
+            designation=designation,
+            skill_level=skill_level,
+            db=db
+        )
+    except Exception as e:
+        # LOG AND IGNORE: Don't let AI failure kill the whole page
+        # The user will just see the raw abstract instead of a deep summary
+        print(f"⚠️ AI Summarization failed for paper {paper_id}: {e}")
 
     # find related papers for this paper's context
     related_papers = get_papers_for_project(
@@ -422,3 +440,115 @@ async def get_project_detail_feed(
             "news"   : len(news),
         }
     }
+
+
+# -------------------------------------------------------
+# GLOBAL SEARCH — personalized search across all sources
+# -------------------------------------------------------
+
+@router.get("/{user_id}/search")
+async def search_feed_globally(
+    user_id: str,
+    q: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Personalized global search.
+    Narrows the entire searchable space based on user's interests + typed query.
+    Used for in-place feed updates.
+    """
+    import uuid
+    from app.ai.searcher import search_papers_semantically
+    from app.ingestion.github_fetcher import fetch_repos_for_project
+    from app.ingestion.hn_fetcher import fetch_stories_for_project
+    from app.ingestion.news_fetcher import search_news
+    from app.ingestion.arxiv_fetcher import fetch_papers
+
+    # Robust ID Handling (Guest support)
+    user = None
+    try:
+        # Check if it's a valid UUID
+        uuid_val = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == str(uuid_val)).first()
+    except (ValueError, AttributeError):
+        pass
+
+    if user:
+        interests = user.interests or []
+        skill_level = user.skill_level or "intermediate"
+        designation = user.designation or "college student"
+    else:
+        # Guest fallback
+        interests = ["AI", "Tech", "Software"]
+        skill_level = "intermediate"
+        designation = "developer"
+
+    # 1. Search Papers (Semantic narrowing)
+    try:
+        papers = search_papers_semantically(query=q, interests=interests, db=db, top_k=10)
+        
+        # If no local papers found, trigger a LIVE fetch (Deep Narrowing)
+        if not papers:
+            live_papers_data = await fetch_papers(field=" ".join(interests[:2]), user_query=q, max_results=10)
+            for p_data in live_papers_data:
+                # Save to SQL if not exists
+                existing = db.query(Paper).filter(Paper.arxiv_id == p_data["arxiv_id"]).first()
+                if not existing:
+                    new_p = Paper(
+                        arxiv_id=p_data["arxiv_id"],
+                        title=p_data["title"],
+                        authors=p_data["authors"],
+                        abstract=p_data["abstract"],
+                        source_url=p_data["source_url"],
+                        published_at=datetime.fromisoformat(p_data["published_date"]) if "published_date" in p_data else datetime.utcnow(),
+                        field=interests[0] if interests else "AI"
+                    )
+                    db.add(new_p)
+                    db.flush() # get ID
+                    papers.append(new_p)
+            db.commit()
+
+        # Apply summarization since these might be "newly discovered" to the feed
+        papers = summarize_feed_batch(
+            papers=papers,
+            designation=designation,
+            skill_level=skill_level,
+            db=db
+        )
+        formatted_papers = [
+            {
+                "id": str(p.id),
+                "title": p.title,
+                "authors": p.authors,
+                "field": p.field,
+                "summary_one_min": p.summary_one_min,
+                "difficulty_score": p.difficulty_score,
+                "source_url": p.source_url,
+            }
+            for p in papers
+        ]
+    except Exception as e:
+        print(f"Paper search error: {e}")
+        formatted_papers = []
+
+    # 2. Search other sources in parallel
+    # We use search specific functions where available
+    # RESTORED: interests are back into the query to ensure broad discovery and personalization.
+    results = await asyncio.gather(
+        search_news(query=f"{q} {interests[0] if interests else ''}", limit=10),
+        fetch_repos_for_project(project_description=f"{q} {', '.join(interests)}", limit=10),
+        fetch_stories_for_project(project_description=q, limit=10),
+        return_exceptions=True
+    )
+
+    news, repos, stories = results
+
+    return {
+        "query": q,
+        "results": {
+            "banner": news if not isinstance(news, Exception) else [],
+            "repos": repos if not isinstance(repos, Exception) else [],
+            "discussions": stories if not isinstance(stories, Exception) else [],
+            "papers": formatted_papers,
+        }
+    }

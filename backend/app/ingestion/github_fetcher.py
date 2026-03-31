@@ -183,35 +183,46 @@ async def fetch_github_trending_multi(
 ) -> list[dict]:
     """
     Fetch trending repos across multiple topics that match user interests.
-    Used for the personalized feed (same role as get_relevant_papers()).
+    Used for the personalized feed. Uses the Search API instead of trending pages
+    since trending pages only support programming languages natively.
 
     Args:
         topics:          User interest keywords e.g. ["python", "nlp", "ai"]
-        since:           "daily" | "weekly" | "monthly"
+        since:           "daily" | "weekly" | "monthly" (Not strictly applied to search API to avoid 0 results)
         limit_per_topic: Repos to fetch per topic before merging
 
     Returns:
-        Deduplicated repos sorted by stars_today descending.
+        Deduplicated repos sorted by stars descending.
     """
     seen_urls: set[str] = set()
     all_repos: list[dict] = []
 
     for topic in topics:
         try:
-            repos = await fetch_github_trending(
-                language=topic,
-                since=since,
-                limit=limit_per_topic,
-            )
+            query = topic if " " not in topic else f'"{topic}"'
+            params = {
+                "q": query,
+                "sort": "stars",
+                "order": "desc",
+                "per_page": limit_per_topic,
+            }
+            async with httpx.AsyncClient(headers=GITHUB_API_HEADERS, timeout=15.0) as client:
+                response = await client.get(GITHUB_SEARCH_API, params=params)
+                response.raise_for_status()
+                data = response.json()
+            
+            items = data.get("items", [])
+            repos = [format_search_result(item) for item in items]
+            
             for repo in repos:
                 if repo["url"] not in seen_urls:
                     seen_urls.add(repo["url"])
                     all_repos.append(repo)
         except Exception as e:
-            logger.warning(f"Failed to fetch trending for topic '{topic}': {e}")
+            logger.warning(f"Failed to fetch search API for topic '{topic}': {e}")
             continue
 
-    # Always include general trending and merge in
+    # Always include general trending and merge in to guarantee some results
     try:
         general = await fetch_github_trending(since=since, limit=limit_per_topic)
         for repo in general:
@@ -221,7 +232,8 @@ async def fetch_github_trending_multi(
     except Exception as e:
         logger.warning(f"Failed to fetch general trending: {e}")
 
-    all_repos.sort(key=lambda r: r["stars_today"], reverse=True)
+    # sort by absolute stars since search doesn't return stars_today
+    all_repos.sort(key=lambda r: r.get("stars_total", 0), reverse=True)
     return all_repos
 
 
@@ -251,6 +263,7 @@ async def fetch_repos_for_project(
     """
     keywords = _extract_keywords(project_description)
     query = " ".join(keywords[:6])
+    query = f"{query} stars:>50 size:>100"
 
     logger.info(f"Searching GitHub repos for project: '{query}'")
 
@@ -267,7 +280,11 @@ async def fetch_repos_for_project(
         data = response.json()
 
     items = data.get("items", [])
-    repos = [format_search_result(item) for item in items]
+    repos = []
+    for item in items:
+        if not item.get("description") or len(item.get("description").strip()) < 10:
+            continue
+        repos.append(format_search_result(item))
     logger.info(f"Found {len(repos)} repos for project query: '{query}'")
     return repos
 

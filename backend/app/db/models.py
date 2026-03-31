@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Text, Float, Integer, DateTime, ForeignKey, ARRAY
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
@@ -11,13 +11,14 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=True)   # bcrypt hash — never store plaintext
     designation = Column(String)
     skill_level = Column(String)
     interests = Column(ARRAY(String))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     saved_papers = relationship("SavedPaper", back_populates="user")
-    connect_requests = relationship("ConnectRequest", back_populates="user")
+    enrolled_projects = relationship("EnrolledProject", back_populates="user", order_by="EnrolledProject.enrolled_at.desc()")
 
 
 class Paper(Base):
@@ -58,14 +59,13 @@ class SavedPaper(Base):
     paper = relationship("Paper", back_populates="saved_by")
 
 
-class ConnectRequest(Base):
-    __tablename__ = "connect_requests"
+class EnrolledProject(Base):
+    __tablename__ = "enrolled_projects"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    paper_id = Column(UUID(as_uuid=True), ForeignKey("papers.id"))
-    message = Column(Text)
-    status = Column(String, default="open")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    project_data = Column(JSONB, nullable=False)  # full project snapshot
+    enrolled_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    user = relationship("User", back_populates="connect_requests")
+    user = relationship("User", back_populates="enrolled_projects")

@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-syne);
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #e2e8f0;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #e0e7ff;
+  --accent-foreground: #4338ca;
+}
+
+.dark {
+  --background: #070910;
+  --foreground: #f8fafc;
+  --card: #111421;
+  --card-foreground: #f8fafc;
+  --border: #232a3e;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --muted: #1a2033;
+  --muted-foreground: #8a96b5;
+  --accent: #1e1b4b;
+  --accent-foreground: #a5b4fc;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
+}
+
+@layer components {
+  .ambient-light {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background: radial-gradient(ellipse 90% 55% at 15% -10%, rgba(59,130,246,0.06) 0%, transparent 65%),
+                radial-gradient(ellipse 60% 45% at 90% 110%, rgba(99,102,241,0.04) 0%, transparent 60%);
+  }
+
+  .dark .ambient-light::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.15;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
+  }
+
+  .glass-panel {
+    background-color: color-mix(in srgb, var(--card) 60%, transparent);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+}

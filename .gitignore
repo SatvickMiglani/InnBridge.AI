@@ -7,3 +7,4 @@ node_modules/
 .next/
 backend/venv/
 docs/
+frontend-old/
