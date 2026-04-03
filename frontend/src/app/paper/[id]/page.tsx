@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { ArrowLeft, BookOpen, Clock, Brain, Rocket, Code2, ExternalLink, ChevronRight, Share2, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, Clock, Brain, Rocket, Code2, ExternalLink, ChevronRight, Share2, Sparkles, Loader2, Zap } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const API = "http://localhost:8000";
 
@@ -50,20 +52,22 @@ export default function PaperDetailPage({ params }: { params: Promise<{ id: stri
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-        <p className="text-sm font-medium text-muted-foreground animate-pulse">Enriching Technical Context...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 animate-fade-in">
+        <div className="w-12 h-12 rounded-full border-4 border-muted border-t-primary animate-spin" />
+        <p className="text-sm font-bold uppercase tracking-widest text-primary animate-pulse">Decoding Scientific Patterns...</p>
       </div>
     );
   }
 
   if (!paper) {
     return (
-      <div className="max-w-2xl mx-auto mt-20 text-center space-y-6">
-        <h2 className="text-2xl font-display font-bold">Paper Not Found</h2>
-        <p className="text-muted-foreground">The resource you are looking for does not exist or has been moved.</p>
-        <Link href="/papers" className="inline-flex items-center gap-2 text-primary font-bold hover:underline">
-          <ArrowLeft className="w-4 h-4" /> Back to Research
+      <div className="max-w-2xl mx-auto mt-20 text-center space-y-8 animate-fade-in">
+        <h2 className="text-4xl font-bold tracking-tight">Intelligence Gap</h2>
+        <p className="text-muted-foreground text-lg">The research asset you're requesting is currently offline or unauthorized.</p>
+        <Link href="/papers">
+            <Button variant="outline" className="gap-2 font-bold border-border">
+                <ArrowLeft className="w-4 h-4" /> Back to Research
+            </Button>
         </Link>
       </div>
     );
@@ -73,161 +77,177 @@ export default function PaperDetailPage({ params }: { params: Promise<{ id: stri
                         viewMode === "5min" ? paper.summary_five_min : 
                         paper.summary_deep;
 
-  return (
-    <div className="max-w-6xl mx-auto pb-20 animate-in fade-in duration-700">
-      {/* HEADER NAVIGATION */}
-      <nav className="flex items-center justify-between mb-12">
-        <Link href="/papers" className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-primary transition-colors group">
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back to Research
-        </Link>
-        <div className="flex items-center gap-3">
-          <button className="p-2.5 rounded-full border border-border hover:bg-muted transition-colors"><Share2 className="w-4 h-4" /></button>
-          <a href={paper.source_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-bold text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-all">
-            View on ArXiv <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
-      </nav>
+  const getDifficultyColor = (score: number) => {
+    if (score <= 3) return "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+    if (score <= 6) return "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+    return "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
+  };
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        
-        {/* LEFT COLUMN: MAIN CONTENT */}
-        <div className="lg:col-span-2 space-y-12">
+  return (
+    <div className="min-h-screen bg-background -mt-4 md:-mt-8 lg:-mt-12">
+      {/* Detail Header */}
+      <div className="border-b border-border bg-card mb-12 -mx-4 md:-mx-8 lg:-mx-12">
+        <div className="container mx-auto px-6 py-12 max-w-7xl">
+          <Link href="/papers">
+            <Button variant="ghost" size="sm" className="mb-8 p-0 h-auto gap-2 text-muted-foreground hover:text-primary transition-colors font-bold uppercase text-[10px] tracking-widest group">
+                <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" /> Return to Research Index
+            </Button>
+          </Link>
           
-          <header className="space-y-6">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+            <div className="space-y-4 flex-1">
               <div className="flex items-center gap-3">
-                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase tracking-widest rounded-full border border-emerald-500/20">
-                    {paper.field}
-                </span>
-                <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                    <Clock className="w-3 h-3" /> {new Date(paper.published_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
-                </span>
+                 <Badge variant="purple" className="lowercase">{paper.field}</Badge>
+                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{new Date(paper.published_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}</span>
               </div>
-              <h1 className="text-4xl md:text-5xl font-serif leading-tight tracking-tight text-foreground">
+              <h1 className="text-3xl md:text-5xl font-bold text-foreground leading-tight max-w-4xl">
                 {paper.title}
               </h1>
-              <p className="text-lg text-muted-foreground font-medium">
-                By {paper.authors?.join(", ") || "Unknown Authors"}
+              <p className="text-lg text-muted-foreground font-medium flex items-center gap-2">
+                 <span className="w-4 h-px bg-muted-foreground opacity-30" />
+                 By {paper.authors?.join(", ") || "Technical Research Team"}
               </p>
-          </header>
-
-          {/* AI SUMMARY CONTROL */}
-          <section className="glass-panel p-8 rounded-[2rem] space-y-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none"><Sparkles className="w-12 h-12" /></div>
-            
-            <div className="flex items-center justify-between border-b border-border/50 pb-6">
-                <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.15em] text-primary">
-                    <Brain className="w-5 h-5" /> AI ENRICHMENT
-                </h2>
-                <div className="flex p-1 bg-muted/50 rounded-full border border-border/50">
-                    {["1min", "5min", "deep"].map((mode) => (
-                        <button
-                          key={mode}
-                          onClick={() => setViewMode(mode as any)}
-                          className={cn(
-                            "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all",
-                            viewMode === mode ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          {mode === "deep" ? "Architectural" : mode}
-                        </button>
-                    ))}
-                </div>
             </div>
-
-            <div className="prose prose-invert max-w-none">
-                <p className="text-lg leading-relaxed text-muted-foreground whitespace-pre-wrap">
-                    {activeSummary}
-                </p>
+            <div className="flex items-center gap-3 shrink-0">
+               <Button variant="outline" className="border-border hover:bg-muted font-bold h-11 px-6">
+                  <Share2 className="w-4 h-4 mr-2" /> Share
+               </Button>
+               <a href={paper.source_url} target="_blank" rel="noreferrer">
+                  <Button className="bg-primary hover:bg-primary/90 text-white font-bold h-11 px-6">
+                      View Source <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+               </a>
             </div>
-          </section>
-
-          {/* BUILD IDEAS */}
-          <section className="space-y-8">
-             <h2 className="flex items-center gap-3 text-lg font-display font-medium">
-                <Rocket className="w-6 h-6 text-primary" /> Project Implementation Concepts
-             </h2>
-             <div className="grid grid-cols-1 gap-4">
-                <div className="p-8 rounded-3xl bg-primary/5 border border-primary/10 relative group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <p className="text-muted-foreground leading-relaxed italic relative z-10">
-                        {paper.build_ideas}
-                    </p>
-                </div>
-             </div>
-          </section>
+          </div>
         </div>
+      </div>
 
-        {/* RIGHT COLUMN: TECHNICAL SPECS & RELATED */}
-        <aside className="space-y-10">
-          
-          {/* TECHNICAL SPEC CARD */}
-          <div className="p-8 rounded-[2rem] bg-card border border-border/50 shadow-sm space-y-8">
-            <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-muted-foreground border-b border-border pb-4">
-                Technical Intelligence
-            </h3>
+      {/* Main Content Grid */}
+      <div className="container mx-auto max-w-7xl px-0 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
             
-            <div className="space-y-6">
-                <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Difficulty Rating</p>
-                    <div className="flex items-center gap-2">
-                        <span className={cn(
-                            "text-xl font-display font-bold",
-                            paper.difficulty_score <= 3 ? "text-emerald-500" : paper.difficulty_score <= 6 ? "text-amber-500" : "text-rose-500"
-                        )}>
-                            {paper.difficulty_score}/10
-                        </span>
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div 
-                                className={cn(
-                                    "h-full transition-all duration-1000",
-                                    paper.difficulty_score <= 3 ? "bg-emerald-500" : paper.difficulty_score <= 6 ? "bg-amber-500" : "bg-rose-500"
-                                )}
-                                style={{ width: `${paper.difficulty_score * 10}%` }}
-                            />
+            {/* Left: Detail Content */}
+            <div className="lg:col-span-2 space-y-16 animate-slide-up">
+                
+                {/* Synthesis Mode Switcher */}
+                <section className="space-y-6">
+                    <div className="flex items-center justify-between border-b border-border pb-4">
+                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                           <Brain size={16} /> Technical Synthesis
+                        </h2>
+                        <div className="flex p-1 bg-muted rounded-lg border border-border shadow-inner">
+                            {["1min", "5min", "deep"].map((mode) => (
+                                <button
+                                  key={mode}
+                                  onClick={() => setViewMode(mode as any)}
+                                  className={cn(
+                                    "px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all",
+                                    viewMode === mode ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                  )}
+                                >
+                                  {mode === "deep" ? "Full Insight" : mode}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div className="professional-card p-8 md:p-12 relative overflow-hidden bg-gradient-to-br from-card to-background">
+                         <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                            <Sparkles size={120} className="text-primary" />
+                         </div>
+                         <div className="relative z-10 leading-relaxed text-foreground/90 text-lg whitespace-pre-wrap selection:bg-primary/20">
+                            {activeSummary}
+                         </div>
+                    </div>
+                </section>
+
+                {/* Implementation / Build Ideas */}
+                <section className="space-y-6">
+                    <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2 border-b border-border pb-4">
+                        <Rocket size={16} /> Experimental Implementation
+                    </h2>
+                    <div className="p-8 bg-primary/5 rounded-xl border border-primary/10 shadow-sm">
+                        <p className="text-lg text-foreground font-medium leading-relaxed italic border-l-4 border-primary pl-6">
+                           "{paper.build_ideas}"
+                        </p>
+                    </div>
+                </section>
+
+                {/* Abstract Fallback */}
+                <section className="space-y-6">
+                    <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground border-b border-border pb-4">
+                        Scientific Abstract
+                    </h2>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                        {paper.abstract}
+                    </p>
+                </section>
+            </div>
+
+            {/* Right: Sidebar Specs */}
+            <aside className="space-y-12 animate-slide-up" style={{ animationDelay: '100ms' }}>
+                
+                <div className="professional-card overflow-hidden">
+                    <div className="p-6 bg-muted/30 border-b border-border">
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Engineering Specs</h3>
+                    </div>
+                    <div className="p-8 space-y-10">
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Complexity Index</p>
+                            <div className="flex items-center gap-4">
+                                <span className={cn("text-3xl font-bold", paper.difficulty_score > 6 ? "text-purple-600" : paper.difficulty_score > 3 ? "text-blue-600" : "text-green-600")}>
+                                    {paper.difficulty_score}/10
+                                </span>
+                                <div className="flex-1 h-1.5 bg-muted rounded-full">
+                                    <div 
+                                        className={cn("h-full rounded-full transition-all duration-1000", paper.difficulty_score > 6 ? "bg-purple-500" : paper.difficulty_score > 3 ? "bg-blue-500" : "bg-green-500")}
+                                        style={{ width: `${paper.difficulty_score * 10}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Est. Implementation Time</p>
+                            <div className="flex items-center gap-3 font-bold text-foreground">
+                                <Clock size={18} className="text-primary" />
+                                {paper.estimated_build_time || "4-8 Engineering Weeks"}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 pt-4 border-t border-border">
+                            <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Suggested Tech Stack</p>
+                            <div className="flex flex-wrap gap-2">
+                                {(paper.suggested_stack || ["Research Focus"]).map((s, i) => (
+                                    <Badge key={i} variant="secondary" className="px-3 py-1 font-bold text-[10px] uppercase bg-muted text-foreground">
+                                        <Code2 size={12} className="mr-1.5 text-primary" /> {s}
+                                    </Badge>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Estimated Build</p>
-                    <div className="flex items-center gap-2 font-bold text-foreground">
-                        <Clock className="w-4 h-4" /> {paper.estimated_build_time}
+                {/* Related Research */}
+                <div className="space-y-6">
+                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground border-l-2 border-primary pl-4">Lateral Insights</h3>
+                    <div className="space-y-3">
+                        {(paper.related_papers || []).map((rp, idx) => (
+                            <Link key={rp.id || idx} href={`/paper/${rp.id}`} className="block">
+                                <div className="professional-card p-5 group hover:border-primary/50 transition-all">
+                                    <h4 className="text-sm font-bold leading-snug group-hover:text-primary transition-colors mb-4 line-clamp-2">{rp.title}</h4>
+                                    <div className="flex items-center justify-between">
+                                        <Badge variant="outline" className="text-[9px] border-border lowercase">{rp.field}</Badge>
+                                        <ChevronRight size={16} className="text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
                     </div>
                 </div>
 
-                <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Suggested Stack</p>
-                    <div className="flex flex-wrap gap-2">
-                        {paper.suggested_stack?.map((s, i) => (
-                            <span key={i} className="px-3 py-1.5 bg-muted/50 rounded-lg text-xs font-semibold border border-border/50 flex items-center gap-1.5">
-                                <Code2 className="w-3 h-3 text-primary/60" /> {s}
-                            </span>
-                        )) || <span className="text-xs text-muted-foreground">General Technical Focus</span>}
-                    </div>
-                </div>
-            </div>
-          </div>
-
-          {/* RELATED RESEARCH */}
-          <div className="space-y-6">
-            <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-muted-foreground px-4">
-                Related Research
-            </h3>
-            <div className="space-y-4">
-                {paper.related_papers?.map((rp) => (
-                    <Link key={rp.id} href={`/paper/${rp.id}`} className="block p-5 rounded-2xl border border-transparent hover:border-border hover:bg-card transition-all group">
-                        <h4 className="text-sm font-bold leading-tight line-clamp-2 mb-2 group-hover:text-primary transition-colors">{rp.title}</h4>
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{rp.field}</span>
-                            <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all" />
-                        </div>
-                    </Link>
-                )) || <p className="text-xs text-muted-foreground px-4">No related research found.</p>}
-            </div>
-          </div>
-
-        </aside>
-
+            </aside>
+        </div>
       </div>
     </div>
   );

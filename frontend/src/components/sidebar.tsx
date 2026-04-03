@@ -18,17 +18,17 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 flex-shrink-0 border-r border-border glass-panel h-screen sticky top-0 flex flex-col pt-6 hidden md:flex">
-      <Link href="/" className="flex items-center gap-3 px-6 mb-8 mt-2">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+    <aside className="w-64 flex-shrink-0 border-r border-border bg-card h-screen sticky top-0 flex flex-col pt-6 hidden md:flex transition-all duration-300">
+      <Link href="/" className="flex items-center gap-3 px-6 mb-8 mt-2 group">
+        <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center flex-shrink-0 shadow-sm transition-transform group-hover:scale-105">
           <Zap className="w-4 h-4 text-white" />
         </div>
-        <span className="font-display font-bold text-lg tracking-tight">
-          InnoBridge <span className="text-primary">AI</span>
+        <span className="font-semibold text-lg tracking-tight text-foreground">
+          InnoBridge <span className="text-primary font-bold">AI</span>
         </span>
       </Link>
 
-      <nav className="flex-1 px-4 space-y-1.5">
+      <nav className="flex-1 px-4 space-y-1">
         {links.map((link) => {
           const Icon = link.icon;
           const isActive = pathname === link.href;
@@ -38,7 +38,7 @@ export function Sidebar() {
               key={link.href}
               href={link.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors group",
                 isActive
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -56,11 +56,11 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 mt-auto border-t border-border space-y-1.5">
+      <div className="p-4 mt-auto border-t border-border space-y-1">
         <Link
           href="/profile"
           className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors group",
             pathname === "/profile"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -72,7 +72,7 @@ export function Sidebar() {
         <Link
           href="/about"
           className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors group",
             pathname === "/about"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"

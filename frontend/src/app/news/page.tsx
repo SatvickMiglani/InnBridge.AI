@@ -1,32 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Newspaper, Clock, ArrowRight } from "lucide-react";
+import { Newspaper, Clock, ArrowRight, Filter, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavbarSearch } from "@/lib/use-navbar-search";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const API = "http://localhost:8000";
 
-function NewsImage({ src, alt, className }: { src?: string, alt: string, className?: string }) {
-  const [error, setError] = useState(false);
-  const isValidSrc = src && src.startsWith('http') && !src.includes("picsum");
-
-  if (!isValidSrc || error) {
-    return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-primary/40 bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
-        <Newspaper className="w-12 h-12 opacity-30" />
-      </div>
-    );
-  }
-
-  return (
-    <img 
-      src={src} 
-      alt={alt} 
-      onError={() => setError(true)}
-      className={cn("w-full h-full object-cover transition-transform duration-700", className)} 
-    />
-  );
+function Loader2({ className }: { className?: string }) {
+    return <div className={cn("w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin", className)} />;
 }
 
 export default function NewsPage() {
@@ -84,56 +68,102 @@ export default function NewsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="flex items-center justify-center min-h-[50vh] animate-fade-in">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500">
-      <div className="pt-4 border-b border-border/50 pb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-medium tracking-tight flex items-center gap-3">
-            <Newspaper className="w-8 h-8 text-primary" /> 
-            {searchContext ? `Narrowing: "${searchContext}"` : "Trending News"}
-            {searching && <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin ml-2" />}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            {searchContext 
-              ? `Showing global results matching your query and interests.`
-              : "Latest headlines and articles tailored to your stack."}
-          </p>
-        </div>
-        {searchContext && (
-          <button 
-            onClick={fetchTrending}
-            className="px-6 py-2 rounded-full border border-border bg-card hover:bg-muted text-sm font-bold transition-all shadow-xl shadow-black/5"
-          >
-            Back to Trending
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {displayNews.length === 0 && <div className="md:col-span-3 p-8 text-center text-muted-foreground glass-panel rounded-3xl">No articles match your search.</div>}
-        {displayNews.map((n: any, i: number) => (
-          <a key={i} href={n.url} target="_blank" rel="noreferrer" className="group flex flex-col rounded-3xl glass-panel relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1">
-            <div className="aspect-video w-full border-b border-border/50 relative bg-muted/20">
-               <NewsImage src={n.image_url} alt={n.title} className="group-hover:scale-105" />
+    <div className="min-h-screen bg-background">
+      <div className="p-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="border-b border-border bg-card mb-12 -mx-4 md:-mx-8 lg:-mx-12 rounded-3xl overflow-hidden">
+          <div className="container mx-auto px-6 py-16 max-w-7xl flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-4">
+              <Badge variant="purple" className="mb-2">Innovation Pulse</Badge>
+              <h1>
+                {searchContext ? `Results: "${searchContext}"` : "Technical News"}
+                {searching && <Loader2 className="inline ml-4 w-6 h-6 animate-spin text-primary" />}
+              </h1>
+              <p className="text-subheading max-w-2xl">
+                Latest developments in AI, research, and disruptive technology aggregated in real-time.
+              </p>
             </div>
-            <div className="p-6 flex flex-col flex-1">
-              <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground mb-3">{n.publisher}</span>
-              <h4 className="font-serif text-lg leading-snug mb-4 group-hover:text-primary transition-colors">{n.title}</h4>
-              <div className="mt-auto flex items-center justify-between w-full">
-                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {n.published_at ? new Date(n.published_at).toLocaleDateString() : 'Recent'}</span>
-                <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors">
-                  <ArrowRight className="w-3.5 h-3.5" />
+            {searchContext && (
+              <Button onClick={fetchTrending} variant="outline" className="font-bold border-border hover:bg-muted">
+                Back to Trending
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* News List */}
+        <div className="container mx-auto max-w-5xl px-0 py-6">
+          <div className="space-y-6 animate-slide-up">
+            {displayNews.length === 0 && (
+              <div className="text-center py-24 border border-dashed border-border rounded-xl">
+                <p className="text-muted-foreground italic">No news discovered matching your criteria.</p>
+              </div>
+            )}
+            {displayNews.map((item, idx) => (
+              <div
+                key={idx}
+                className="professional-card p-6 md:p-8 hover:shadow-lg transition-all duration-300 animate-slide-up group"
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
+                <div className="flex flex-col md:flex-row gap-8">
+                    {item.image_url && (
+                        <div className="w-full md:w-48 h-32 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+                            <img 
+                              src={item.image_url} 
+                              alt={item.title} 
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              onError={(e) => (e.currentTarget.style.display = 'none')}
+                            />
+                        </div>
+                    )}
+                    <div className="flex-1 flex flex-col">
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                          <div className="space-y-2">
+                             <div className="flex items-center gap-3">
+                                 <Badge variant="secondary" className="text-[10px] font-bold uppercase">{item.publisher || "Global Tech"}</Badge>
+                                 <span className="text-[10px] font-bold text-muted-foreground uppercase">{item.published_at ? new Date(item.published_at).toLocaleDateString() : 'Recent'}</span>
+                             </div>
+                             <h3 className="leading-tight group-hover:text-primary transition-colors">
+                              <a href={item.url} target="_blank" rel="noreferrer" className="cursor-pointer">
+                                {item.title}
+                              </a>
+                            </h3>
+                          </div>
+                          <Zap size={20} className="text-primary opacity-40 shrink-0 mt-1" />
+                      </div>
+
+                      <p className="text-muted-foreground text-sm mb-6 leading-relaxed line-clamp-2 md:line-clamp-3">
+                          {item.description || "Stay updated with the latest technological shifts and AI breakthroughs aggregated specifically for developers and engineers."}
+                      </p>
+
+                      <div className="mt-auto flex items-center justify-between">
+                          <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                              Artificial Intelligence
+                          </div>
+                          <a href={item.url} target="_blank" rel="noreferrer">
+                              <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-primary hover:bg-primary/10 font-bold text-xs uppercase group-hover:translate-x-1 transition-transform"
+                              >
+                                  Read Full Report →
+                              </Button>
+                          </a>
+                      </div>
+                    </div>
                 </div>
               </div>
-            </div>
-          </a>
-        ))}
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

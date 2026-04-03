@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Code2, BookmarkPlus, BookmarkCheck, Clock, Target, ArrowRight, ArrowLeft, Loader2, FileText, Flame, Terminal, Zap, Network } from "lucide-react";
+import { Sparkles, Code2, Zap, X, Target, Clock, ArrowRight, Loader2, BookOpen, Github, Flame, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const API = "http://localhost:8000";
 
@@ -13,43 +15,11 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Workspace overlay state
+  
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [workspaceData, setWorkspaceData] = useState<any>(null);
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [enrollStatus, setEnrollStatus] = useState<string>("idle");
-
-  // Check if navigated from profile with a project to view
-  useEffect(() => {
-    const stored = localStorage.getItem("view_project");
-    if (stored) {
-      localStorage.removeItem("view_project");
-      try {
-        const projectData = JSON.parse(stored);
-        if (projectData && projectData.title) {
-          setSelectedProject(projectData);
-          setWorkspaceLoading(true);
-          setEnrollStatus("already");
-
-          // Fetch related workspace data
-          const userId = localStorage.getItem("user_id");
-          if (userId) {
-            fetch(`${API}/feed/${userId}/project-detail?project_description=${encodeURIComponent(projectData.title)}`)
-              .then(res => res.ok ? res.json() : null)
-              .then(data => { if (data) setWorkspaceData(data.related); })
-              .catch(() => {})
-              .finally(() => setWorkspaceLoading(false));
-          } else {
-            setWorkspaceLoading(false);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to parse view_project from localStorage", e);
-      }
-    }
-  }, []);
 
   const generateProjects = async () => {
     if (!prompt.trim()) return;
@@ -61,8 +31,6 @@ export default function ProjectsPage() {
 
     setLoading(true);
     setHasSearched(true);
-    setProjects([]);
-    setSelectedProject(null);
     setError(null);
 
     try {
@@ -71,69 +39,35 @@ export default function ProjectsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, prompt: prompt })
       });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.detail || `Server error ${res.status}`);
-      }
+      if (!res.ok) throw new Error("Failed to generate project blueprints");
       const data = await res.json();
-      const fetched = data.projects || [];
-      if (fetched.length === 0) {
-        setError("No projects were generated. Try rephrasing your prompt or try again.");
-      }
-      setProjects(fetched);
+      setProjects(data.projects || []);
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to generate project blueprints. Please try again.");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadMoreProjects = async () => {
-    if (!prompt.trim() || projects.length === 0) return;
-    const userId = localStorage.getItem("user_id");
-    if (!userId) return;
-
-    setLoadingMore(true);
-    // Gather existing AI project titles to exclude
-    const existingTitles = projects.filter(p => p.type === 'ai').map(p => p.title);
-
-    try {
-      const res = await fetch(`${API}/projects/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, prompt: prompt, exclude_titles: existingTitles })
-      });
-      if (!res.ok) throw new Error("Failed to load more projects");
-      const data = await res.json();
-      setProjects(prev => [...prev, ...(data.projects || [])]);
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to load more projects: " + (err.message || "Unknown error"));
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  const openWorkspace = async (project: any) => {
+  const openProject = async (project: any) => {
     setSelectedProject(project);
-    setWorkspaceData(null);
     setWorkspaceLoading(true);
     setEnrollStatus("idle");
 
     const userId = localStorage.getItem("user_id");
-    if (!userId) return;
+    if (!userId) {
+        setWorkspaceLoading(false);
+        return;
+    }
 
     try {
-        // Use strictly the project title to ensure Qdrant hits precise technical scientific terms
-        const searchQuery = project.title;
-        const res = await fetch(`${API}/feed/${userId}/project-detail?project_description=${encodeURIComponent(searchQuery)}`);
+        const res = await fetch(`${API}/feed/${userId}/project-detail?project_description=${encodeURIComponent(project.title)}`);
         if (res.ok) {
             const data = await res.json();
             setWorkspaceData(data.related);
         }
     } catch (err) {
-        console.error("Failed to load workspace data", err);
+        console.error("Workspace error:", err);
     } finally {
         setWorkspaceLoading(false);
     }
@@ -166,302 +100,243 @@ export default function ProjectsPage() {
     }
   };
 
-  if (selectedProject) {
-    return (
-      <div className="max-w-6xl mx-auto space-y-8 pb-20 animate-in slide-in-from-right duration-500 relative z-10">
-         <button onClick={() => setSelectedProject(null)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 group">
-            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back to Blueprints
-         </button>
-
-         <div className="p-8 md:p-12 glass-panel rounded-3xl relative overflow-hidden">
-             <div className={cn("absolute top-0 left-0 w-full h-2", selectedProject.type === 'ai' ? "bg-gradient-to-r from-emerald-400 to-teal-500" : "bg-gradient-to-r from-blue-400 to-indigo-500")} />
-             
-             <div className="flex flex-col md:flex-row gap-8 justify-between">
-                 <div className="max-w-3xl">
-                     <span className={cn("px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border mb-6 inline-flex items-center gap-2", 
-                         selectedProject.type === 'ai' ? "border-emerald-500/20 text-emerald-400 bg-emerald-500/10" : "border-blue-500/20 text-blue-400 bg-blue-500/10"
-                     )}>
-                        {selectedProject.type === 'ai' ? <Sparkles className="w-3 h-3" /> : <Terminal className="w-3 h-3" />}
-                        {selectedProject.type === 'ai' ? 'AI Generated Roadmap' : 'Industry Open Source'}
-                     </span>
-                     <h1 className="text-3xl md:text-5xl font-display font-medium tracking-tight mb-4 text-foreground">{selectedProject.title}</h1>
-                     {selectedProject.type === 'ai' ? (
-                         <div className="space-y-8 mt-8">
-                             {selectedProject.problem_statement && (
-                                 <div className="p-6 rounded-3xl bg-card border border-border/60 shadow-sm shadow-black/5 animate-in fade-in duration-500">
-                                     <h3 className="text-xl font-serif font-bold text-foreground mb-3 flex items-center gap-2"><Target className="w-5 h-5 text-red-400" /> Problem Statement</h3>
-                                     <div className="text-base md:text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap">{selectedProject.problem_statement}</div>
-                                 </div>
-                             )}
-                             
-                             {selectedProject.target_audience && (
-                                 <div className="animate-in fade-in duration-500 delay-75">
-                                     <h3 className="text-lg font-serif font-bold text-foreground mb-2 flex items-center gap-2"><Network className="w-5 h-5 text-indigo-400" /> Target Audience</h3>
-                                     <div className="text-base text-muted-foreground leading-relaxed whitespace-pre-wrap">{selectedProject.target_audience}</div>
-                                 </div>
-                             )}
-
-                             {selectedProject.proposed_solution && (
-                                 <div className="p-6 rounded-3xl bg-card border border-border/60 shadow-sm shadow-black/5 animate-in fade-in duration-500 delay-100">
-                                     <h3 className="text-xl font-serif font-bold text-foreground mb-3 flex items-center gap-2"><Code2 className="w-5 h-5 text-blue-400" /> Proposed Solution</h3>
-                                     <div className="text-base md:text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap">{selectedProject.proposed_solution}</div>
-                                 </div>
-                             )}
-
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in duration-500 delay-150">
-                                 {selectedProject.core_features && Array.isArray(selectedProject.core_features) && (
-                                     <div className="p-6 rounded-3xl glass-panel">
-                                         <h3 className="text-lg font-serif font-bold text-foreground mb-4">Core Features</h3>
-                                         <ul className="space-y-3">
-                                             {selectedProject.core_features.map((feat: string, i: number) => (
-                                                 <li key={i} className="flex gap-3 text-sm text-foreground/80">
-                                                     <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                                                     <span className="leading-relaxed">{feat}</span>
-                                                 </li>
-                                             ))}
-                                         </ul>
-                                     </div>
-                                 )}
-
-                                 {selectedProject.tech_stack && Array.isArray(selectedProject.tech_stack) && (
-                                     <div className="p-6 rounded-3xl glass-panel">
-                                         <h3 className="text-lg font-serif font-bold text-foreground mb-4">Technical Stack Options</h3>
-                                         <ul className="space-y-3">
-                                             {selectedProject.tech_stack.map((stack: string, i: number) => (
-                                                 <li key={i} className="flex gap-3 text-sm text-foreground/80">
-                                                     <Terminal className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                                                     <span className="leading-relaxed">{stack}</span>
-                                                 </li>
-                                             ))}
-                                         </ul>
-                                     </div>
-                                 )}
-                             </div>
-
-                             {selectedProject.novelty && (
-                                 <div className="animate-in fade-in duration-500 delay-200">
-                                     <h3 className="text-lg font-serif font-bold text-foreground mb-2 flex items-center gap-2"><Zap className="w-5 h-5 text-yellow-500" /> Engineering Novelty</h3>
-                                     <div className="text-base text-muted-foreground leading-relaxed whitespace-pre-wrap">{selectedProject.novelty}</div>
-                                 </div>
-                             )}
-
-                             {selectedProject.pitch && (
-                                 <div className="p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl mt-6 shadow-lg shadow-emerald-500/5 animate-in fade-in duration-500 delay-300">
-                                     <h3 className="text-xl font-serif font-bold text-emerald-400 mb-3 flex items-center gap-2"><Flame className="w-6 h-6" /> Why You Need To Build This</h3>
-                                     <div className="text-lg text-emerald-300/90 leading-relaxed font-medium whitespace-pre-wrap">{selectedProject.pitch}</div>
-                                 </div>
-                             )}
-                         </div>
-                     ) : (
-                         <div className="text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap">{selectedProject.description}</div>
-                     )}
-                 </div>
-                 <div className="flex flex-col gap-4 shrink-0">
-                     <button
-                       disabled={enrollStatus !== "idle"}
-                       onClick={enrollInProject}
-                       className={`px-6 py-3 rounded-full font-semibold flex items-center gap-2 justify-center transition-all shadow-lg disabled:cursor-not-allowed ${
-                         enrollStatus === "enrolled" || enrollStatus === "already"
-                           ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-emerald-500/10"
-                           : enrollStatus === "failed"
-                             ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-red-500/10"
-                             : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
-                       }`}
-                     >
-                       {enrollStatus === "saving" && <Loader2 className="w-4 h-4 animate-spin" />}
-                       {enrollStatus === "idle" && <BookmarkPlus className="w-4 h-4" />}
-                       {(enrollStatus === "enrolled" || enrollStatus === "already") && <BookmarkCheck className="w-4 h-4" />}
-                       {enrollStatus === "failed" && <Zap className="w-4 h-4" />}
-                       {enrollStatus === "idle" && "Enroll in Project"}
-                       {enrollStatus === "saving" && "Saving..."}
-                       {enrollStatus === "enrolled" && "Enrolled ✓"}
-                       {enrollStatus === "already" && "Already Enrolled ✓"}
-                       {enrollStatus === "failed" && "Failed — Retry"}
-                     </button>
-                     {selectedProject.type === 'github' && selectedProject.url && (
-                        <a href={selectedProject.url} target="_blank" rel="noreferrer" className="px-6 py-3 rounded-full border border-border bg-card font-semibold flex items-center justify-center gap-2 hover:bg-muted transition-all">
-                            View on GitHub <ArrowRight className="w-4 h-4" />
-                        </a>
-                     )}
-                 </div>
-             </div>
-             
-             <div className="flex flex-wrap items-center gap-6 mt-8 font-medium">
-                 <div className="flex items-center gap-2 text-muted-foreground"><Target className="w-5 h-5 text-amber-500" /> Difficulty {selectedProject.difficulty_score}/10</div>
-                 <div className="flex items-center gap-2 text-muted-foreground"><Clock className="w-5 h-5 text-blue-500" /> Est. {selectedProject.estimated_time || "Variable"}</div>
-                 {selectedProject.stars && <div className="flex items-center gap-2 text-muted-foreground text-yellow-500 font-bold">★ {selectedProject.stars.toLocaleString()} Stars</div>}
-             </div>
-         </div>
-
-         <div className="space-y-12 pb-10">
-             <div className="space-y-6">
-                 <h2 className="text-2xl font-serif text-foreground flex items-center gap-3"><Terminal className="w-6 h-6 text-primary" /> Project Roadmap</h2>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     {selectedProject.roadmap?.map((step: string, i: number) => (
-                         <div key={i} className="flex gap-4 p-6 glass-panel rounded-2xl relative overflow-hidden group hover:border-primary/30 transition-colors">
-                           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold font-display shrink-0 mt-0.5">{i+1}</div>
-                           <p className="text-muted-foreground leading-relaxed">{step}</p>
-                         </div>
-                     ))}
-                 </div>
-             </div>
-
-             <div className="space-y-6">
-                 <h2 className="text-2xl font-serif text-foreground flex items-center gap-3"><Network className="w-6 h-6 text-primary" /> Related Knowledge Ecosystem</h2>
-                 {workspaceLoading ? (
-                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground glass-panel rounded-3xl">
-                         <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" /> Scanning ArXiv, GitHub, and HackerNews...
-                     </div>
-                 ) : workspaceData ? (
-                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                         {/* Papers */}
-                         <div className="flex flex-col gap-4 p-6 glass-panel rounded-3xl">
-                            <h3 className="text-lg font-medium flex items-center gap-2 mb-2 text-emerald-400"><FileText className="w-5 h-5" /> Research Papers</h3>
-                            {workspaceData.papers?.length ? workspaceData.papers.slice(0, 3).map((p: any, idx: number) => (
-                               <Link href={`/paper/${p.id}`} key={p.id || idx} className="p-4 rounded-2xl bg-card border border-border hover:border-emerald-500/50 transition-colors group">
-                                  <h4 className="font-semibold text-sm group-hover:text-emerald-400 transition-colors line-clamp-2">{p.title}</h4>
-                               </Link>
-                            )) : <p className="text-muted-foreground text-sm">No papers found.</p>}
-                         </div>
-
-                         {/* Github */}
-                         <div className="flex flex-col gap-4 p-6 glass-panel rounded-3xl">
-                            <h3 className="text-lg font-medium flex items-center gap-2 mb-2 text-blue-400"><Terminal className="w-5 h-5" /> Open Source Repos</h3>
-                            {workspaceData.repos?.length ? workspaceData.repos.slice(0, 3).map((r: any, idx: number) => (
-                               <a href={r.html_url || r.url} target="_blank" rel="noreferrer" key={r.full_name || r.id || idx} className="p-4 rounded-2xl bg-card border border-border hover:border-blue-500/50 transition-colors group">
-                                  <h4 className="font-semibold text-sm group-hover:text-blue-400 transition-colors line-clamp-2">{r.full_name || r.title}</h4>
-                               </a>
-                            )) : <p className="text-muted-foreground text-sm">No repos found.</p>}
-                         </div>
-
-                         {/* HN Discussions */}
-                         <div className="flex flex-col gap-4 p-6 glass-panel rounded-3xl">
-                            <h3 className="text-lg font-medium flex items-center gap-2 mb-2 text-orange-400"><Flame className="w-5 h-5" /> HN Discussions</h3>
-                            {workspaceData.stories?.length ? workspaceData.stories.slice(0, 3).map((s: any, idx: number) => (
-                               <a href={s.url || s.hn_url} target="_blank" rel="noreferrer" key={s.id || s.url || idx} className="p-4 rounded-2xl bg-card border border-border hover:border-orange-500/50 transition-colors group">
-                                  <h4 className="font-semibold text-sm group-hover:text-orange-400 transition-colors line-clamp-2">{s.title}</h4>
-                               </a>
-                            )) : <p className="text-muted-foreground text-sm">No discussions found.</p>}
-                         </div>
-                     </div>
-                 ) : (
-                     <div className="glass-panel p-12 rounded-3xl text-muted-foreground text-center">No related context found.</div>
-                 )}
-             </div>
-         </div>
-      </div>
-    );
-  }
+  const getDifficultyColor = (score: number | string) => {
+    const s = typeof score === 'string' ? parseInt(score) : score;
+    if (s <= 3) return "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+    if (s <= 6) return "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+    return "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
+  };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500 relative z-10">
-      
-      {/* HEADER / INPUT */}
-      <div className="pt-4 border-b border-border/50 pb-12 flex flex-col items-center text-center">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-medium tracking-tight flex items-center gap-4 mb-6">
-          <Code2 className="w-10 h-10 md:w-12 md:h-12 text-primary" /> Project Hub
-        </h1>
-        <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10">
-          Describe what you want to build. We'll generate custom blueprints and fetch trending industry-level architectures for you to clone.
-        </p>
+    <div className="min-h-screen bg-background">
+      <div className="p-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="border-b border-border bg-card mb-12 -mx-4 md:-mx-8 lg:-mx-12 rounded-3xl overflow-hidden">
+          <div className="container mx-auto px-6 py-16 max-w-7xl">
+            <Badge variant="purple" className="mb-4">Project Engine</Badge>
+            <h1>
+              Project Blueprints
+            </h1>
+            <p className="text-subheading max-w-2xl">
+              Describe your idea to generate instant technical specifications, roadmaps, and industry-grade tech stacks.
+            </p>
 
-        <div className="w-full max-w-3xl relative group">
-           <textarea 
-               value={prompt}
-               onChange={(e) => setPrompt(e.target.value)}
-               placeholder="e.g. A real-time chat application using WebSockets with a focus on privacy..."
-               className="w-full bg-card/60 backdrop-blur-xl border border-border/60 rounded-3xl p-6 md:p-8 text-lg font-medium text-foreground placeholder:text-muted-foreground/50 resize-none outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all shadow-xl shadow-black/5 min-h-[160px]"
-           />
-           <button 
-               onClick={generateProjects}
-               disabled={!prompt.trim() || loading}
-               className="absolute bottom-6 right-6 p-4 rounded-2xl bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/95 transition-all shadow-lg hover:-translate-y-1 hover:shadow-primary/20"
-           >
-               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Sparkles className="w-6 h-6" />}
-           </button>
+            <div className="mt-10 flex flex-col md:flex-row gap-3 max-w-4xl">
+                <div className="relative flex-1 group">
+                   <input 
+                      type="text"
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && generateProjects()}
+                      placeholder="e.g. A high-performance real-time analytics dashboard..."
+                      className="w-full h-12 pl-4 pr-10 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base"
+                   />
+                   <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                </div>
+                <Button 
+                  onClick={generateProjects} 
+                  disabled={loading || !prompt.trim()}
+                  className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold min-w-[200px]"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Zap className="w-5 h-5 mr-2" />}
+                  Generate Engineering Plan
+                </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Blueprints Grid */}
+        <div className="container mx-auto max-w-7xl px-0 animate-fade-in">
+          {loading ? (
+              <div className="py-24 flex flex-col items-center justify-center gap-6">
+                  <div className="w-16 h-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
+                  <p className="text-sm font-bold uppercase tracking-widest text-primary animate-pulse">Architecting Your System...</p>
+              </div>
+          ) : projects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20 animate-slide-up">
+              {projects.map((p, idx) => (
+                  <div
+                  key={idx}
+                  className="professional-card p-6 flex flex-col group cursor-pointer animate-fade-in"
+                  style={{ animationDelay: `${idx * 100}ms` }}
+                  onClick={() => openProject(p)}
+                  >
+                  <div className="flex items-start justify-between mb-4">
+                      <Code2 size={24} className="text-primary opacity-60 transition-opacity group-hover:opacity-100" />
+                      <Badge
+                          variant="secondary"
+                          className={cn("text-[10px] font-bold uppercase", getDifficultyColor(p.difficulty_score || 5))}
+                      >
+                          {p.difficulty_score <= 3 ? "Beginner" : p.difficulty_score <= 6 ? "Intermediate" : "Advanced"}
+                      </Badge>
+                  </div>
+
+                  <h3 className="mb-2 group-hover:text-primary transition-colors">
+                      {p.title}
+                  </h3>
+                  <p className="text-muted-foreground text-sm mb-6 line-clamp-2 leading-relaxed">
+                      {p.description}
+                  </p>
+
+                  <div className="flex flex-wrap gap-1.5 mb-6 mt-auto">
+                      {(p.tech_stack || []).slice(0, 3).map((tech: string) => (
+                      <span
+                          key={tech}
+                          className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-muted text-muted-foreground"
+                      >
+                          {tech}
+                      </span>
+                      ))}
+                      {(p.tech_stack || []).length > 3 && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-muted text-muted-foreground opacity-50">
+                          +{(p.tech_stack || []).length - 3} more
+                      </span>
+                      )}
+                  </div>
+
+                  <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-primary hover:bg-primary/10 font-bold text-xs uppercase"
+                  >
+                      System Specs →
+                  </Button>
+                  </div>
+              ))}
+              </div>
+          ) : hasSearched && !error ? (
+              <div className="text-center py-32 border border-dashed border-border rounded-2xl">
+                  <p className="text-muted-foreground italic">No architectures found. Try a different engineering prompt.</p>
+              </div>
+          ) : null}
         </div>
       </div>
 
-      {loading && (
-          <div className="py-20 flex flex-col items-center justify-center text-muted-foreground gap-6">
-              <div className="relative">
-                 <div className="w-20 h-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-                 <div className="absolute inset-0 flex items-center justify-center">
-                    <Sparkles className="w-6 h-6 text-primary animate-pulse" />
-                 </div>
-              </div>
-              <p className="font-display font-medium text-lg uppercase tracking-widest text-primary/80 animate-pulse">Generating Blueprints & Scanning open Source...</p>
-          </div>
-      )}
-
-      {hasSearched && !loading && (
-          <div className="space-y-8 animate-in slide-in-from-bottom-10 fade-in duration-700">
-              {error && (
-                <div className="flex items-center gap-4 p-5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 animate-in fade-in duration-300">
-                  <div className="shrink-0 w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
-                    <Zap className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm">Generation Error</p>
-                    <p className="text-xs text-red-400/80 mt-0.5">{error}</p>
-                  </div>
-                  <button onClick={() => { setError(null); generateProjects(); }} className="px-4 py-2 rounded-full bg-red-500/20 hover:bg-red-500/30 text-xs font-bold transition-colors">
-                    Retry
-                  </button>
+      {/* Modal */}
+      {selectedProject && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm animate-fade-in">
+            <div className="bg-card border border-border rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slide-up">
+              {/* Modal Header */}
+              <div className="flex items-start justify-between p-6 md:p-8 border-b border-border sticky top-0 bg-card z-10">
+                <div className="flex-1 pr-8">
+                  <Badge variant="purple" className="mb-2 lowercase">{selectedProject.type || 'ai roadmap'}</Badge>
+                  <h2>
+                    {selectedProject.title}
+                  </h2>
                 </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                 <h2 className="text-2xl font-serif text-foreground">Found <span className="text-primary font-bold">{projects.length}</span> Project Options</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {projects.map((p, i) => (
-                      <div key={i} onClick={() => openWorkspace(p)} className="group flex flex-col bg-card border border-border/50 rounded-3xl p-6 md:p-8 cursor-pointer hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 transition-all duration-300 relative overflow-hidden">
-                          <div className={cn("absolute top-0 left-0 w-full h-1.5 opacity-0 group-hover:opacity-100 transition-opacity", 
-                              p.type === 'ai' ? "bg-gradient-to-r from-emerald-400 to-teal-500" : "bg-gradient-to-r from-blue-400 to-indigo-500"
-                          )} />
-                          
-                          <div className="flex items-center justify-between mb-6">
-                             <span className={cn("px-3 py-1 text-[9px] font-bold uppercase tracking-widest rounded-full border flex items-center gap-1.5",
-                                p.type === 'ai' ? "border-emerald-500/20 text-emerald-500 bg-emerald-500/10" : "border-blue-500/20 text-blue-500 bg-blue-500/10"
-                             )}>
-                                {p.type === 'ai' ? <Sparkles className="w-3 h-3" /> : <Terminal className="w-3 h-3" />}
-                                {p.type === 'ai' ? "AI Blueprint" : "Open Source"}
-                             </span>
-                             {p.stars && <span className="text-xs font-bold text-yellow-500">★ {p.stars.toLocaleString()}</span>}
-                          </div>
-
-                          <h3 className="text-2xl font-serif font-bold text-foreground mb-3 leading-tight group-hover:text-primary transition-colors">{p.title}</h3>
-                          <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-3">{p.description}</p>
-                          {p.proposed_solution && (
-                            <p className="text-xs text-foreground/50 leading-relaxed mb-6 flex-1 line-clamp-2 italic border-l-2 border-primary/20 pl-3">{p.proposed_solution}</p>
-                          )}
-                          {!p.proposed_solution && <div className="flex-1" />}
-                          
-                          <div className="flex items-center justify-between pt-4 border-t border-border/60 text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
-                              <span className="flex items-center gap-1.5"><Target className="w-4 h-4 text-amber-500" /> Lvl {p.difficulty_score}</span>
-                              <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-blue-500" /> {p.estimated_time || "Var"}</span>
-                          </div>
-                      </div>
-                  ))}
+                <button
+                  onClick={() => setSelectedProject(null)}
+                  className="p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground hover:text-foreground"
+                >
+                  <X size={20} />
+                </button>
               </div>
 
-              {projects.length > 0 && (
-                  <div className="flex justify-center pt-10">
-                      <button 
-                          onClick={loadMoreProjects} 
-                          disabled={loadingMore}
-                          className="px-8 py-3 rounded-full border border-border bg-card/50 backdrop-blur hover:bg-muted font-medium flex items-center gap-2 transition-all disabled:opacity-50 hover:shadow-lg shadow-black/5"
+              {/* Modal Content */}
+              <div className="p-6 md:p-8 space-y-10">
+                {/* Summary */}
+                <div>
+                  <h3 className="text-label mb-4 flex items-center gap-2">
+                    <Zap size={16} className="text-primary" />
+                    System Architecture Summary
+                  </h3>
+                  <p className="text-base text-foreground leading-relaxed">
+                    {selectedProject.proposed_solution || selectedProject.description}
+                  </p>
+                </div>
+
+                {/* Tech Stack */}
+                <div>
+                  <h3 className="text-label mb-4 flex items-center gap-2">
+                    <Code2 size={16} className="text-primary" />
+                    Technical Specifications
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {(selectedProject.tech_stack || []).map((tech: string) => (
+                      <Badge
+                        key={tech}
+                        variant="secondary"
+                        className="bg-muted text-foreground font-semibold px-3 py-1"
                       >
-                          {loadingMore ? <Loader2 className="w-5 h-5 animate-spin" /> : <Flame className="w-5 h-5 text-orange-500" />}
-                          {loadingMore ? "Synthesizing More Ideas..." : "Load More Projects"}
-                      </button>
+                        {tech}
+                      </Badge>
+                    ))}
                   </div>
-              )}
-          </div>
-      )}
+                </div>
 
+                {/* Roadmaps / Features */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 className="text-label mb-4">
+                            Phase Roadmap
+                        </h3>
+                        <ul className="space-y-3">
+                            {(selectedProject.roadmap || selectedProject.core_features || []).map((item: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-4">
+                                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                                    {idx + 1}
+                                </span>
+                                <span className="text-sm text-foreground/80 leading-relaxed">{item}</span>
+                            </li>
+                            ))}
+                        </ul>
+                    </div>
+                    {/* Related context from current app logic */}
+                    <div>
+                        <h3 className="text-label mb-4">
+                            Contextual Resources
+                        </h3>
+                        {workspaceLoading ? (
+                            <div className="space-y-2 animate-pulse">
+                                <div className="h-8 bg-muted rounded w-full" />
+                                <div className="h-8 bg-muted rounded w-full" />
+                            </div>
+                        ) : workspaceData ? (
+                            <div className="space-y-2">
+                                {workspaceData.papers?.slice(0, 2).map((p: any) => (
+                                    <Link key={p.id} href={`/paper/${p.id}`} className="block p-3 rounded bg-muted/30 border border-border hover:border-primary/50 text-xs font-semibold truncate transition-colors">
+                                        <BookOpen size={14} className="inline mr-2 text-primary" /> {p.title}
+                                    </Link>
+                                ))}
+                                {workspaceData.repos?.slice(0, 2).map((r: any) => (
+                                    <a key={r.url} href={r.url} target="_blank" rel="noreferrer" className="block p-3 rounded bg-muted/30 border border-border hover:border-primary/50 text-xs font-semibold truncate transition-colors">
+                                        <Github size={14} className="inline mr-2 text-primary" /> {r.title || r.full_name}
+                                    </a>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-xs italic text-muted-foreground">Generating related technical context...</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* CTA */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-8 border-t border-border">
+                  <Button
+                    className="flex-1 bg-primary hover:bg-primary/90 text-white font-bold h-12"
+                    onClick={enrollInProject}
+                    disabled={enrollStatus !== "idle"}
+                  >
+                        {enrollStatus === "saving" && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                        {enrollStatus === "idle" && <Flame size={18} className="mr-2" />}
+                        {(enrollStatus === "enrolled" || enrollStatus === "already") && <Zap size={18} className="mr-2" />}
+                        {enrollStatus === "idle" && "Secure Blueprint"}
+                        {enrollStatus === "saving" && "Encoding..."}
+                        {enrollStatus === "enrolled" && "Asset Secured ✓"}
+                        {enrollStatus === "already" && "Already Secured ✓"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-border hover:bg-muted font-bold h-12"
+                    onClick={() => setSelectedProject(null)}
+                  >
+                    Close Specifications
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 }

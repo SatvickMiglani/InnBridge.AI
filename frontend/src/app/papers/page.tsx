@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileText, ArrowRight } from "lucide-react";
+import { BookOpen, ArrowRight, Filter, Search, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useNavbarSearch } from "@/lib/use-navbar-search";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const API = "http://localhost:8000";
 
@@ -57,67 +59,102 @@ export default function PapersPage() {
     return () => window.removeEventListener("navbar-search-submit", handleSearchSubmit);
   }, []);
 
+  const getDifficultyColor = (score: number) => {
+    if (score <= 3) return "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+    if (score <= 6) return "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+    return "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
+  };
+
   const displayPapers = (searchQuery && !searchContext)
     ? papers.filter(p => p.title?.toLowerCase().includes(searchQuery.toLowerCase()) || p.abstract?.toLowerCase().includes(searchQuery.toLowerCase()) || p.field?.toLowerCase().includes(searchQuery.toLowerCase()))
     : papers;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="flex items-center justify-center min-h-[50vh] animate-fade-in">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500">
-      <div className="pt-4 border-b border-border/50 pb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-medium tracking-tight flex items-center gap-3">
-            <FileText className="w-8 h-8 text-primary" /> 
-            {searchContext ? `Narrowing Research: "${searchContext}"` : "Research Papers"}
-            {searching && <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin ml-2" />}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            {searchContext 
-              ? `We've narrowed the global research ecosystem to your query and profile.`
-              : "The latest arXiv preprints digested for you."}
-          </p>
+    <div className="min-h-screen bg-background">
+      <div className="p-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="border-b border-border bg-card mb-12 -mx-4 md:-mx-8 lg:-mx-12 rounded-3xl overflow-hidden">
+          <div className="container mx-auto px-6 py-16 max-w-7xl flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-4">
+              <Badge variant="purple" className="mb-2">Science & Research</Badge>
+              <h1>
+                {searchContext ? `Research for "${searchContext}"` : "Technical Papers"}
+                {searching && <Loader2 className="inline ml-4 w-6 h-6 animate-spin text-primary" />}
+              </h1>
+              <p className="text-subheading max-w-2xl">
+                Academic breakthroughs and technical preprints digested and prioritized for your tech stack.
+              </p>
+            </div>
+            {searchContext && (
+              <Button onClick={fetchTrending} variant="outline" className="font-bold border-border hover:bg-muted">
+                Clear Results
+              </Button>
+            )}
+          </div>
         </div>
-        {searchContext && (
-          <button 
-            onClick={fetchTrending}
-            className="px-6 py-2 rounded-full border border-border bg-card hover:bg-muted text-sm font-bold transition-all shadow-xl shadow-black/5"
-          >
-            Back to Trending
-          </button>
-        )}
-      </div>
 
-      <div className="flex flex-col gap-6">
-        {displayPapers.length === 0 && <div className="p-8 text-center text-muted-foreground glass-panel rounded-3xl">No papers match your search.</div>}
-        {displayPapers.map((p) => (
-          <Link key={p.id} href={`/paper/${p.id}`} className="block p-8 rounded-3xl glass-panel hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all group relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="flex items-baseline justify-between gap-4 mb-4">
-              <h3 className="font-serif text-xl md:text-2xl leading-snug text-foreground group-hover:text-primary transition-colors pr-10">{p.title}</h3>
-              <ArrowRight className="w-5 h-5 text-muted-foreground opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all shrink-0" />
-            </div>
-            <p className="text-base text-muted-foreground mb-8 leading-relaxed max-w-4xl">{p.summary_one_min || p.abstract}</p>
-            <div className="flex items-center gap-4">
-              <span className="text-xs uppercase font-bold tracking-wider text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md">{p.field || 'Research'}</span>
-              <span className={cn(
-                "text-xs px-3 py-1.5 rounded-md font-bold uppercase tracking-wider",
-                p.difficulty_score <= 3 ? "bg-emerald-500/10 text-emerald-500" :
-                p.difficulty_score <= 6 ? "bg-amber-500/10 text-amber-500" :
-                "bg-rose-500/10 text-rose-500"
-              )}>
-                {p.difficulty_score <= 3 ? "Beginner Friendly" : p.difficulty_score <= 6 ? "Intermediate" : "Advanced"}
-              </span>
-              <span className="text-[10px] text-muted-foreground ml-auto">{p.published_at ? new Date(p.published_at).toLocaleDateString() : 'Recent'}</span>
-            </div>
-          </Link>
-        ))}
+        {/* Papers Grid */}
+        <div className="container mx-auto max-w-7xl px-0 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
+            {displayPapers.length === 0 && (
+              <div className="md:col-span-2 text-center py-24 border border-dashed border-border rounded-xl">
+                <p className="text-muted-foreground italic">No research papers found matching your query.</p>
+              </div>
+            )}
+            {displayPapers.map((item, idx) => (
+              <div
+                key={idx}
+                className="professional-card p-6 md:p-8 hover:shadow-lg transition-all duration-300 animate-slide-up group"
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                      <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                             <Badge variant="secondary" className="text-[10px] font-bold uppercase">{item.field || "General Research"}</Badge>
+                             <Badge 
+                                  variant="secondary" 
+                                  className={cn("text-[10px] font-bold uppercase", getDifficultyColor(item.difficulty_score || 5))}
+                              >
+                                  {item.difficulty_score <= 3 ? "Beginner" : item.difficulty_score <= 6 ? "Intermediate" : "Advanced"}
+                              </Badge>
+                          </div>
+                          <h3 className="leading-tight group-hover:text-primary transition-colors">
+                              <Link href={`/paper/${item.id}`} className="cursor-pointer">
+                                {item.title}
+                              </Link>
+                          </h3>
+                      </div>
+                      <BookOpen size={20} className="text-primary opacity-40 shrink-0 mt-1" />
+                  </div>
+
+                  <p className="text-muted-foreground text-sm mb-6 leading-relaxed line-clamp-3">
+                      {item.summary_one_min || item.abstract || "Detailed scientific analysis of emerging technological patterns and theoretical breakthroughs in the field of computer science."}
+                  </p>
+
+                  <div className="mt-auto flex items-center justify-between pt-6 border-t border-border">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{item.published_at ? new Date(item.published_at).toLocaleDateString() : 'Recent Publication'}</span>
+                      <Link href={`/paper/${item.id}`}>
+                          <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-primary hover:bg-primary/10 font-bold text-xs uppercase group-hover:translate-x-1 transition-transform"
+                          >
+                              View Deep Insight →
+                          </Button>
+                      </Link>
+                  </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

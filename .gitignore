@@ -8,3 +8,4 @@ node_modules/
 backend/venv/
 docs/
 frontend-old/
+.agent/
